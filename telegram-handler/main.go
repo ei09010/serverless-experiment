@@ -3,10 +3,12 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -27,6 +29,8 @@ var (
 
 	lenStartCommand = len(startCommand)
 
+	chatId = 0
+
 	// DefaultHTTPGetAddress Default Address
 	RandomFactsAddress = "https://uselessfacts.jsph.pl/today.json?language=en"
 
@@ -35,6 +39,8 @@ var (
 
 	// ErrNon200Response non 200 status code in response
 	ErrNon200Response = errors.New("Non 200 Response found")
+
+	telegramApi = "https://api.telegram.org/bot" + os.Getenv("TELEGRAM_BOT_TOKEN") + "/sendMessage"
 )
 
 type GeneratedFact struct {
@@ -65,14 +71,23 @@ type Chat struct {
 
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 
+	log.Println("The request has the following body: %V", request.Body)
+
+	if request.HTTPMethod != http.MethodPost {
+		log.Println("Received irrelevant request")
+
+		return events.APIGatewayProxyResponse{
+			StatusCode: 200,
+			Body:       "Thank you for reaching out, stuff is up and running, but this is telegram bot and this endpoint will eventually cease to exist",
+		}, nil
+	}
 	update, err := parseTelegramRequest(request.Body)
 
 	if err != nil {
 		return events.APIGatewayProxyResponse{}, err
 	}
 
-	// Sanitize input
-	var sanitizedSeed = sanitize(update.Message.Text)
+	fmt.Println(update.Message.Text)
 
 	generatedFact, err := getRandomFact()
 
@@ -80,16 +95,30 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		return events.APIGatewayProxyResponse{}, err
 	}
 
-	generateFactText, err := json.Marshal(generatedFact)
+	generateFactText, err := json.Marshal(generatedFact.Text)
 
 	if err != nil {
 		return events.APIGatewayProxyResponse{}, err
 	}
 
-	// trigger post with response??
+	unquotedStr, err := strconv.Unquote(string(generateFactText))
 
+	if err != nil {
+		return events.APIGatewayProxyResponse{}, err
+	}
+
+	// send message to telegram through a post
+	tempResponse, err := sendTextToTelegramChat(chatId, unquotedStr)
+
+	if err != nil {
+		return events.APIGatewayProxyResponse{}, err
+	}
+
+	fmt.Println(tempResponse)
+
+	// returns response to caller
 	return events.APIGatewayProxyResponse{
-		Body:       string(generateFactText),
+		Body:       unquotedStr,
 		StatusCode: 200,
 	}, nil
 
@@ -120,7 +149,7 @@ func getRandomFact() (GeneratedFact, error) {
 		return responseGeneratedFact, err
 	}
 
-	err = json.Unmarshal([]byte(body), responseGeneratedFact)
+	err = json.Unmarshal([]byte(body), &responseGeneratedFact)
 
 	if err != nil {
 		return responseGeneratedFact, err
@@ -140,28 +169,10 @@ func parseTelegramRequest(requestBody string) (*Update, error) {
 		log.Printf("could not decode incoming update %s", err.Error())
 		return nil, err
 	}
+
+	chatId = update.Message.Chat.Id
+
 	return &update, nil
-}
-
-// sanitize remove clutter like /start /count or the bot name from the string s passed as input
-func sanitize(s string) string {
-	if len(s) >= lenStartCommand {
-		if s[:lenStartCommand] == startCommand {
-			s = s[lenStartCommand:]
-		}
-	}
-
-	if len(s) >= lenCountCommand {
-		if s[:lenCountCommand] == countCommand {
-			s = s[lenCountCommand:]
-		}
-	}
-	if len(s) >= lenBotTag {
-		if s[:lenBotTag] == botTag {
-			s = s[lenBotTag:]
-		}
-	}
-	return s
 }
 
 func sendTextToTelegramChat(chatId int, text string) (string, error) {
@@ -178,6 +189,7 @@ func sendTextToTelegramChat(chatId int, text string) (string, error) {
 		log.Printf("error when posting text to the chat: %s", err.Error())
 		return "", err
 	}
+
 	defer response.Body.Close()
 
 	var bodyBytes, errRead = ioutil.ReadAll(response.Body)
