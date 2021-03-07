@@ -1,7 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
+	"io/ioutil"
+	"my-first-telegram-bot/telegram-handler/restclient"
+	"my-first-telegram-bot/telegram-handler/utils/mocks"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -9,6 +13,10 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/stretchr/testify/assert"
 )
+
+func init() {
+	restclient.Client = &mocks.MockClient{}
+}
 
 func TestHandler(t *testing.T) {
 	// t.Run("Unable to get IP", func(t *testing.T) {
@@ -53,10 +61,30 @@ func TestHandler(t *testing.T) {
 		// Arrange
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(200)
-
-			escapedJsonContent := "{\"id\": \"96221b11-8a37-4495-baf0-134be4feffc1\", \"text\": \"To Ensure Promptness, one is expected to pay beyond the value of service – hence the later abbreviation: T.I.P.\", \"source\": \"djtech.net\", \"source_url\": \"http://www.djtech.net/humor/useless_facts.htm\", \"language\": \"en\", \"permalink\": \"https://uselessfacts.jsph.pl/96221b11-8a37-4495-baf0-134be4feffc1\"}"
-			w.Write([]byte(escapedJsonContent))
 		}))
+
+		mocks.GetDoFuncGET = func(*http.Request) (*http.Response, error) {
+			escapedJsonContent := "{\"id\": \"96221b11-8a37-4495-baf0-134be4feffc1\", \"text\": \"To Ensure Promptness, one is expected to pay beyond the value of service – hence the later abbreviation: T.I.P.\", \"source\": \"djtech.net\", \"source_url\": \"http://www.djtech.net/humor/useless_facts.htm\", \"language\": \"en\", \"permalink\": \"https://uselessfacts.jsph.pl/96221b11-8a37-4495-baf0-134be4feffc1\"}"
+
+			r := ioutil.NopCloser(bytes.NewReader([]byte(escapedJsonContent)))
+
+			return &http.Response{
+				StatusCode: 200,
+				Body:       r,
+			}, nil
+		}
+
+		mocks.GetDoFuncPOST = func(*http.Request) (*http.Response, error) {
+
+			escapedJsonContent := "{\"ok\": true,\"result\": {\"message_id\": 26,\"from\": {\"id\": 1025326803,\"is_bot\": true,\"first_name\": \"MyDailyFact\",\"username\": \"majoFFper_bot\"},\"chat\": {\"id\": -255361673,\"title\": \"Pokémons\",\"type\": \"group\",\"all_members_are_administrators\": true},\"date\": 1614894279,\"text\": \"To Ensure Promptness, one is expected to pay beyond the value of service – hence the later abbreviation: T.I.P.\"}}"
+
+			r := ioutil.NopCloser(bytes.NewReader([]byte(escapedJsonContent)))
+
+			return &http.Response{
+				StatusCode: 200,
+				Body:       r,
+			}, nil
+		}
 
 		defer ts.Close()
 
@@ -64,7 +92,7 @@ func TestHandler(t *testing.T) {
 
 		telegramRequest := Update{
 			Message: Message{
-				Text: "hello world",
+				Text: "/fact",
 				Chat: Chat{
 					Id: 1234,
 				},
@@ -89,7 +117,7 @@ func TestHandler(t *testing.T) {
 		// Assert
 
 		assert.EqualValues(t,
-			"To Ensure Promptness, one is expected to pay beyond the value of service – hence the later abbreviation: T.I.P.",
+			`{"ok": true,"result": {"message_id": 26,"from": {"id": 1025326803,"is_bot": true,"first_name": "MyDailyFact","username": "majoFFper_bot"},"chat": {"id": -255361673,"title": "Pokémons","type": "group","all_members_are_administrators": true},"date": 1614894279,"text": "To Ensure Promptness, one is expected to pay beyond the value of service – hence the later abbreviation: T.I.P."}}`,
 			response.Body)
 	})
 }

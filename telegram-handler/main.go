@@ -3,17 +3,21 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"log"
-	"net/http"
+	"my-first-telegram-bot/telegram-handler/restclient"
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 )
+
+type Configuration struct {
+	TelegramApiToken string
+}
 
 var (
 	botTag = "@CovidCount"
@@ -31,16 +35,13 @@ var (
 
 	chatId = 0
 
-	// DefaultHTTPGetAddress Default Address
 	RandomFactsAddress = "https://uselessfacts.jsph.pl/today.json?language=en"
 
-	// ErrNoIP No IP found in response
-	ErrNoIP = errors.New("No IP in HTTP response")
+	RandomJokesAddress = "http://api.icndb.com/jokes/random?limitTo=[nerdy]"
 
-	// ErrNon200Response non 200 status code in response
 	ErrNon200Response = errors.New("Non 200 Response found")
 
-	telegramApi = "https://api.telegram.org/bot" + os.Getenv("TELEGRAM_BOT_TOKEN") + "/sendMessage"
+	telegramApi = "https://api.telegram.org/bot" + os.Getenv("TELEGRAM_API_TOKEN") + "/sendMessage"
 )
 
 type GeneratedFact struct {
@@ -50,6 +51,15 @@ type GeneratedFact struct {
 	SourceURL string `json:"source_url"`
 	Language  string `json:"language"`
 	Permalink string `json:"permalink"`
+}
+
+type GenerateJoke struct {
+	Type  string `json:"type"`
+	Value struct {
+		ID         int      `json:"id"`
+		Joke       string   `json:"joke"`
+		Categories []string `json:"categories"`
+	} `json:"value"`
 }
 
 // Update is a Telegram object that the handler receives every time an user interacts with the bot.
@@ -71,37 +81,57 @@ type Chat struct {
 
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 
-	log.Println("The request has the following body: %V", request.Body)
+	log.Default().Printf("The request has the following body: %s", request.Body)
 
-	if request.HTTPMethod != http.MethodPost {
-		log.Println("Received irrelevant request")
+	update, err := parseTelegramRequest(request.Body)
 
+	if err != nil {
 		return events.APIGatewayProxyResponse{
 			StatusCode: 200,
 			Body:       "Thank you for reaching out, stuff is up and running, but this is telegram bot and this endpoint will eventually cease to exist",
 		}, nil
 	}
-	update, err := parseTelegramRequest(request.Body)
 
-	if err != nil {
-		return events.APIGatewayProxyResponse{}, err
+	log.Printf("processed the following text from telegram: %s", update.Message.Text)
+
+	var generatedText []byte
+
+	if strings.Contains(update.Message.Text, "/fact") {
+
+		generatedFact, err := getRandomFact()
+
+		if err != nil {
+			return events.APIGatewayProxyResponse{}, err
+		}
+
+		generatedText, err = json.Marshal(generatedFact.Text)
+
+		if err != nil {
+			return events.APIGatewayProxyResponse{}, err
+		}
+	} else if strings.Contains(update.Message.Text, "/joke") {
+
+		generatedJoke, err := getRandomJoke()
+
+		if err != nil {
+			return events.APIGatewayProxyResponse{}, err
+		}
+
+		generatedText, err = json.Marshal(generatedJoke.Value.Joke)
+
+		if err != nil {
+			return events.APIGatewayProxyResponse{}, err
+		}
+	} else {
+		log.Printf("No valid input dected")
+
+		return events.APIGatewayProxyResponse{
+			StatusCode: 200,
+			Body:       "No valid input dected",
+		}, nil
 	}
 
-	fmt.Println(update.Message.Text)
-
-	generatedFact, err := getRandomFact()
-
-	if err != nil {
-		return events.APIGatewayProxyResponse{}, err
-	}
-
-	generateFactText, err := json.Marshal(generatedFact.Text)
-
-	if err != nil {
-		return events.APIGatewayProxyResponse{}, err
-	}
-
-	unquotedStr, err := strconv.Unquote(string(generateFactText))
+	unquotedStr, err := strconv.Unquote(string(generatedText))
 
 	if err != nil {
 		return events.APIGatewayProxyResponse{}, err
@@ -114,18 +144,50 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		return events.APIGatewayProxyResponse{}, err
 	}
 
-	fmt.Println(tempResponse)
-
-	// returns response to caller
+	log.Printf("Got the following response from telegram: %s", tempResponse)
 	return events.APIGatewayProxyResponse{
-		Body:       unquotedStr,
 		StatusCode: 200,
+		Body:       tempResponse,
 	}, nil
 
 }
 
+func getRandomJoke() (GenerateJoke, error) {
+	resp, err := restclient.Get(RandomJokesAddress)
+
+	responseGeneratedJoke := GenerateJoke{}
+
+	if err != nil {
+		return responseGeneratedJoke, err
+	}
+
+	if resp.StatusCode != 200 {
+		return responseGeneratedJoke, err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		return responseGeneratedJoke, err
+	}
+
+	err = json.Unmarshal([]byte(body), &responseGeneratedJoke)
+
+	if err != nil {
+		return responseGeneratedJoke, err
+	}
+
+	if len(responseGeneratedJoke.Value.Joke) == 0 {
+		return responseGeneratedJoke, err
+	}
+
+	return responseGeneratedJoke, nil
+}
+
 func getRandomFact() (GeneratedFact, error) {
-	resp, err := http.Get(RandomFactsAddress)
+	resp, err := restclient.Get(RandomFactsAddress)
 
 	responseGeneratedFact := GeneratedFact{}
 
@@ -134,10 +196,6 @@ func getRandomFact() (GeneratedFact, error) {
 	}
 
 	if resp.StatusCode != 200 {
-		return responseGeneratedFact, err
-	}
-
-	if err != nil {
 		return responseGeneratedFact, err
 	}
 
@@ -165,6 +223,7 @@ func getRandomFact() (GeneratedFact, error) {
 // parseTelegramRequest handles incoming update from the Telegram web hook
 func parseTelegramRequest(requestBody string) (*Update, error) {
 	var update Update
+
 	if err := json.Unmarshal([]byte(requestBody), &update); err != nil {
 		log.Printf("could not decode incoming update %s", err.Error())
 		return nil, err
@@ -178,7 +237,7 @@ func parseTelegramRequest(requestBody string) (*Update, error) {
 func sendTextToTelegramChat(chatId int, text string) (string, error) {
 
 	log.Printf("Sending %s to chat_id: %d", text, chatId)
-	response, err := http.PostForm(
+	response, err := restclient.PostForm(
 		telegramApi,
 		url.Values{
 			"chat_id": {strconv.Itoa(chatId)},
