@@ -81,7 +81,7 @@ type Chat struct {
 
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 
-	log.Default().Printf("The request has the following body: %s", request.Body)
+	log.Printf("The request has the following body: %s", request.Body)
 
 	update, err := parseTelegramRequest(request.Body)
 
