@@ -2,7 +2,7 @@ package mocks
 
 import "net/http"
 
-type MockClient struct {
+type MockHTTPClient struct {
 	DoFuncGET  func(req *http.Request) (*http.Response, error)
 	DoFuncPOST func(req *http.Request) (*http.Response, error)
 }
@@ -13,7 +13,7 @@ var (
 	GetDoFuncPOST func(req *http.Request) (*http.Response, error)
 )
 
-func (m *MockClient) Do(req *http.Request) (*http.Response, error) {
+func (m *MockHTTPClient) Do(req *http.Request) (*http.Response, error) {
 
 	if req.Method == http.MethodGet {
 		return GetDoFuncGET(req)

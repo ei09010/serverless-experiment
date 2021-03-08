@@ -47,7 +47,7 @@ func TestHandler(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		RandomFactsAddress = ts.URL
+		restclient.RandomFactsAddress = ts.URL
 
 		// Act
 		_, err := handler(events.APIGatewayProxyRequest{})
@@ -73,9 +73,9 @@ func TestHandler(t *testing.T) {
 
 		}))
 
-		RandomFactsAddress = ts.URL
-		RandomJokesAddress = ts.URL
-		telegramApi = ts.URL
+		restclient.RandomFactsAddress = ts.URL
+		restclient.RandomJokesAddress = ts.URL
+		restclient.TelegramApi = ts.URL
 
 		defer ts.Close()
 
@@ -112,7 +112,7 @@ func TestHandler(t *testing.T) {
 
 	t.Run("Successful Request mocking the rest client", func(t *testing.T) {
 
-		restclient.Client = &mocks.MockClient{}
+		restclient.Client = &mocks.MockHTTPClient{}
 
 		mocks.GetDoFuncGET = func(*http.Request) (*http.Response, error) {
 			escapedJsonContent := "{\"id\": \"96221b11-8a37-4495-baf0-134be4feffc1\", \"text\": \"To Ensure Promptness, one is expected to pay beyond the value of service – hence the later abbreviation: T.I.P.\", \"source\": \"djtech.net\", \"source_url\": \"http://www.djtech.net/humor/useless_facts.htm\", \"language\": \"en\", \"permalink\": \"https://uselessfacts.jsph.pl/96221b11-8a37-4495-baf0-134be4feffc1\"}"
