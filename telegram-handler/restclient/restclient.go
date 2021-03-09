@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	Client HTTPClient
+	Client *http.Client
 
 	RandomFactsAddress = "https://uselessfacts.jsph.pl/today.json?language=en"
 
@@ -22,7 +22,7 @@ var (
 
 	TelegramApi = "https://api.telegram.org/bot" + os.Getenv("TELEGRAM_API_TOKEN") + "/sendMessage"
 
-	MyFactClient, MyJokeClient, MyTelegramClient *baseClient
+	MyFactClient, MyJokeClient, MyTelegramClient *BaseClient
 )
 
 type GeneratedFact struct {
@@ -52,16 +52,16 @@ type JokeClient interface {
 }
 
 type TelegramClient interface {
-	PostResponse(chatId int, text string) (string, error)
+	PostResponse(chatId int, content string) (string, error)
 }
 
-type baseClient struct {
+type BaseClient struct {
 	client http.Client
 	url    string
 }
 
-func New(url string) *baseClient {
-	return &baseClient{
+func New(url string) *BaseClient {
+	return &BaseClient{
 		http.Client{
 			Timeout: time.Duration(30) * time.Second,
 		},
@@ -69,7 +69,7 @@ func New(url string) *baseClient {
 	}
 }
 
-func (cb *baseClient) GetFact() (*GeneratedFact, error) {
+func (cb *BaseClient) GetFact() (*GeneratedFact, error) {
 
 	r, err := get(cb.url)
 
@@ -104,7 +104,7 @@ func (cb *baseClient) GetFact() (*GeneratedFact, error) {
 	return responseGeneratedFact, nil
 }
 
-func (cb *baseClient) GetJoke() (*GeneratedJoke, error) {
+func (cb *BaseClient) GetJoke() (*GeneratedJoke, error) {
 
 	r, err := get(cb.url)
 
@@ -139,7 +139,7 @@ func (cb *baseClient) GetJoke() (*GeneratedJoke, error) {
 	return responseGeneratedJoke, nil
 }
 
-func (cb *baseClient) PostResponse(chatId int, text string) (string, error) {
+func (cb *BaseClient) PostResponse(chatId int, text string) (string, error) {
 	log.Printf("Sending %s to chat_id: %d", text, chatId)
 	response, err := postForm(
 		TelegramApi,
@@ -164,10 +164,6 @@ func (cb *baseClient) PostResponse(chatId int, text string) (string, error) {
 	log.Printf("Body of Telegram Response: %s", bodyString)
 
 	return bodyString, nil
-}
-
-type HTTPClient interface {
-	Do(req *http.Request) (*http.Response, error)
 }
 
 func init() {

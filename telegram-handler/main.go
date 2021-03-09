@@ -12,24 +12,7 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 )
 
-type Configuration struct {
-	TelegramApiToken string
-}
-
 var (
-	botTag = "@CovidCount"
-
-	lenBotTag = len(botTag)
-
-	// Define a few constants and variable to handle different commands
-	countCommand = "/givemethecount"
-
-	lenCountCommand = len(countCommand)
-
-	startCommand = "/start"
-
-	lenStartCommand = len(startCommand)
-
 	chatId = 0
 
 	ErrNon200Response = errors.New("Non 200 Response found")
@@ -50,10 +33,6 @@ type Message struct {
 // A Telegram Chat indicates the conversation to which the message belongs.
 type Chat struct {
 	Id int `json:"id"`
-}
-
-func init() {
-
 }
 
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
