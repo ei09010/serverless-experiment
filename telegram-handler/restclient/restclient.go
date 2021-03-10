@@ -10,7 +10,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 )
 
 var (
@@ -22,7 +21,9 @@ var (
 
 	TelegramApi = "https://api.telegram.org/bot" + os.Getenv("TELEGRAM_API_TOKEN") + "/sendMessage"
 
-	MyFactClient, MyJokeClient, MyTelegramClient *BaseClient
+	MyFactClient     FactClient     = &BaseClient{url: RandomFactsAddress}
+	MyJokeClient     JokeClient     = &BaseClient{url: RandomJokesAddress}
+	MyTelegramClient TelegramClient = &BaseClient{url: TelegramApi}
 )
 
 type GeneratedFact struct {
@@ -34,13 +35,15 @@ type GeneratedFact struct {
 	Permalink string `json:"permalink"`
 }
 
+type JokeValue struct {
+	ID         int      `json:"id"`
+	Joke       string   `json:"joke"`
+	Categories []string `json:"categories"`
+}
+
 type GeneratedJoke struct {
 	Type  string `json:"type"`
-	Value struct {
-		ID         int      `json:"id"`
-		Joke       string   `json:"joke"`
-		Categories []string `json:"categories"`
-	} `json:"value"`
+	Value JokeValue
 }
 
 type FactClient interface {
@@ -58,15 +61,6 @@ type TelegramClient interface {
 type BaseClient struct {
 	client http.Client
 	url    string
-}
-
-func New(url string) *BaseClient {
-	return &BaseClient{
-		http.Client{
-			Timeout: time.Duration(30) * time.Second,
-		},
-		url,
-	}
 }
 
 func (cb *BaseClient) GetFact() (*GeneratedFact, error) {
@@ -168,12 +162,6 @@ func (cb *BaseClient) PostResponse(chatId int, text string) (string, error) {
 
 func init() {
 	Client = &http.Client{}
-
-	MyJokeClient = New(RandomJokesAddress)
-
-	MyFactClient = New(RandomJokesAddress)
-
-	MyTelegramClient = New(TelegramApi)
 }
 
 func get(url string) (*http.Response, error) {

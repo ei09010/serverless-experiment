@@ -1,6 +1,8 @@
 package mocks
 
-import "my-first-telegram-bot/telegram-handler/restclient"
+import (
+	"my-first-telegram-bot/telegram-handler/restclient"
+)
 
 var (
 	ReturnGetFact      func() (*restclient.GeneratedFact, error)

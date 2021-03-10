@@ -67,7 +67,7 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		}
 	} else if strings.Contains(update.Message.Text, "/joke") {
 
-		generatedJoke, err := restclient.MyFactClient.GetJoke()
+		generatedJoke, err := restclient.MyJokeClient.GetJoke()
 
 		if err != nil {
 			return events.APIGatewayProxyResponse{}, err

@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"my-first-telegram-bot/telegram-handler/restclient"
 	"my-first-telegram-bot/telegram-handler/utils/mocks"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -89,26 +87,82 @@ func TestHandler(t *testing.T) {
 	// 		response.Body)
 	// })
 
-	t.Run("Issue getting fact from fact api", func(t *testing.T) {
+	// t.Run("Issue getting fact from fact api", func(t *testing.T) {
 
-		// Arrange
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(500)
-		}))
-		defer ts.Close()
+	// 	// Arrange
+	// 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	// 		w.WriteHeader(500)
+	// 	}))
+	// 	defer ts.Close()
 
-		restclient.RandomFactsAddress = ts.URL
+	// 	restclient.RandomFactsAddress = ts.URL
+
+	// 	// Act
+	// 	_, err := handler(events.APIGatewayProxyRequest{})
+
+	// 	// Assert
+	// 	if err == nil {
+	// 		t.Fatal("Error failed to trigger with an invalid HTTP response")
+	// 	}
+	// })
+
+	t.Run("Successful Joke Request mocking the rest client", func(t *testing.T) {
+
+		mocks.ReturnGetJoke = func() (*restclient.GeneratedJoke, error) {
+
+			return &restclient.GeneratedJoke{
+				Type: "1",
+				Value: restclient.JokeValue{
+					ID:         1,
+					Joke:       "",
+					Categories: []string{"1", "2"},
+				},
+			}, nil
+		}
+
+		mocks.ReturnPostResponse = func(chatId int, text string) (string, error) {
+
+			escapedJsonContent := "{\"ok\": true,\"result\": {\"message_id\": 26,\"from\": {\"id\": 1025326803,\"is_bot\": true,\"first_name\": \"MyDailyFact\",\"username\": \"majoFFper_bot\"},\"chat\": {\"id\": -255361673,\"title\": \"Pokémons\",\"type\": \"group\",\"all_members_are_administrators\": true},\"date\": 1614894279,\"text\": \"To Ensure Promptness, one is expected to pay beyond the value of service – hence the later abbreviation: T.I.P.\"}}"
+
+			return escapedJsonContent, nil
+		}
+
+		telegramRequest := Update{
+			Message: Message{
+				Text: "/joke",
+				Chat: Chat{
+					Id: 1234,
+				},
+			},
+			UpdateId: 1,
+		}
+
+		requestBody, err := json.Marshal(telegramRequest)
+
+		tempRequest := events.APIGatewayProxyRequest{
+			Body:       string(requestBody),
+			Path:       "http://myTelegramWebHookHandler.com/secretToken",
+			HTTPMethod: "POST",
+		}
+
+		restclient.MyJokeClient = &mocks.MockBaseClient{}
+
+		restclient.MyTelegramClient = &mocks.MockBaseClient{}
 
 		// Act
-		_, err := handler(events.APIGatewayProxyRequest{})
+		response, err := handler(tempRequest)
+
+		if err != nil {
+			t.Fatal("Everything should be ok")
+		}
 
 		// Assert
-		if err == nil {
-			t.Fatal("Error failed to trigger with an invalid HTTP response")
-		}
+		assert.EqualValues(t,
+			`{"ok": true,"result": {"message_id": 26,"from": {"id": 1025326803,"is_bot": true,"first_name": "MyDailyFact","username": "majoFFper_bot"},"chat": {"id": -255361673,"title": "Pokémons","type": "group","all_members_are_administrators": true},"date": 1614894279,"text": "To Ensure Promptness, one is expected to pay beyond the value of service – hence the later abbreviation: T.I.P."}}`,
+			response.Body)
 	})
 
-	t.Run("Successful Request mocking the rest client", func(t *testing.T) {
+	t.Run("Successful Fact Request mocking the rest client", func(t *testing.T) {
 
 		mocks.ReturnGetFact = func() (*restclient.GeneratedFact, error) {
 
@@ -148,6 +202,8 @@ func TestHandler(t *testing.T) {
 		}
 
 		restclient.MyFactClient = &mocks.MockBaseClient{}
+
+		restclient.MyTelegramClient = &mocks.MockBaseClient{}
 
 		// Act
 		response, err := handler(tempRequest)

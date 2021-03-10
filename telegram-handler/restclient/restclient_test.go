@@ -26,7 +26,7 @@ func TestRestClient(t *testing.T) {
 			}
 		}))
 
-		factClient := New(ts.URL)
+		factClient := &BaseClient{url: ts.URL}
 
 		// Act
 		response, err := factClient.GetFact()
