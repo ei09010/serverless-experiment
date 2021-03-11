@@ -21,8 +21,10 @@ var (
 
 	TelegramApi = "https://api.telegram.org/bot" + os.Getenv("TELEGRAM_API_TOKEN") + "/sendMessage"
 
-	MyFactClient     FactClient     = &BaseClient{url: RandomFactsAddress}
-	MyJokeClient     JokeClient     = &BaseClient{url: RandomJokesAddress}
+	MyFactClient FactClient = &BaseClient{url: RandomFactsAddress}
+
+	MyJokeClient JokeClient = &BaseClient{url: RandomJokesAddress}
+
 	MyTelegramClient TelegramClient = &BaseClient{url: TelegramApi}
 )
 
@@ -135,8 +137,9 @@ func (cb *BaseClient) GetJoke() (*GeneratedJoke, error) {
 
 func (cb *BaseClient) PostResponse(chatId int, text string) (string, error) {
 	log.Printf("Sending %s to chat_id: %d", text, chatId)
+
 	response, err := postForm(
-		TelegramApi,
+		cb.url,
 		url.Values{
 			"chat_id": {strconv.Itoa(chatId)},
 			"text":    {text},
