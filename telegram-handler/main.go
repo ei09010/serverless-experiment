@@ -44,7 +44,7 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	if err != nil {
 		return events.APIGatewayProxyResponse{
 			StatusCode: 200,
-			Body:       "Thank you for reaching out, stuff is up and running, but this is telegram bot and this endpoint will eventually cease to exist",
+			Body:       "Thank you for reaching out, stuff is up and running, but this is a telegram bot and this endpoint will eventually vanish",
 		}, nil
 	}
 
@@ -57,7 +57,12 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		generatedFact, err := restclient.MyFactClient.GetFact()
 
 		if err != nil {
-			return events.APIGatewayProxyResponse{}, err
+
+			return events.APIGatewayProxyResponse{
+				StatusCode: 500,
+				Body:       "Error calling fact generation api",
+			}, err
+
 		}
 
 		generatedText, err = json.Marshal(generatedFact.Text)
@@ -65,12 +70,16 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		if err != nil {
 			return events.APIGatewayProxyResponse{}, err
 		}
+
 	} else if strings.Contains(update.Message.Text, "/joke") {
 
 		generatedJoke, err := restclient.MyJokeClient.GetJoke()
 
 		if err != nil {
-			return events.APIGatewayProxyResponse{}, err
+			return events.APIGatewayProxyResponse{
+				StatusCode: 500,
+				Body:       "Error calling joke generation api",
+			}, err
 		}
 
 		generatedText, err = json.Marshal(generatedJoke.Value.Joke)
@@ -78,6 +87,7 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		if err != nil {
 			return events.APIGatewayProxyResponse{}, err
 		}
+
 	} else {
 		log.Printf("No valid input dected")
 
@@ -93,14 +103,17 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		return events.APIGatewayProxyResponse{}, err
 	}
 
-	// send message to telegram through a post
 	tempResponse, err := restclient.MyTelegramClient.PostResponse(chatId, unquotedStr)
 
 	if err != nil {
-		return events.APIGatewayProxyResponse{}, err
+		return events.APIGatewayProxyResponse{
+			StatusCode: 500,
+			Body:       tempResponse,
+		}, err
 	}
 
 	log.Printf("Got the following response from telegram: %s", tempResponse)
+
 	return events.APIGatewayProxyResponse{
 		StatusCode: 200,
 		Body:       tempResponse,

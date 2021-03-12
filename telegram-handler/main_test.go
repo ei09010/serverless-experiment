@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"my-first-telegram-bot/telegram-handler/restclient"
 	"my-first-telegram-bot/telegram-handler/utils/mocks"
 	"testing"
@@ -12,101 +13,173 @@ import (
 
 func TestHandler(t *testing.T) {
 
-	// t.Run("Unable to get IP", func(t *testing.T) {
-	// 	RandomFactsAddress = "http://127.0.0.1:12345"
+	t.Run("Failed Post Response", func(t *testing.T) {
 
-	// 	_, err := handler(events.APIGatewayProxyRequest{})
-	// 	if err == nil {
-	// 		t.Fatal("Error failed to trigger with an invalid request")
-	// 	}
-	// })
+		expectedTelegramResponse := "issue in telegram"
 
-	// t.Run("Non 200 Response", func(t *testing.T) {
-	// 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	// 		w.WriteHeader(500)
-	// 	}))
-	// 	defer ts.Close()
+		mocks.ReturnGetJoke = func() (*restclient.GeneratedJoke, error) {
 
-	// 	RandomFactsAddress = ts.URL
+			return &restclient.GeneratedJoke{
+				Type: "1",
+				Value: restclient.JokeValue{
+					ID:         1,
+					Joke:       "",
+					Categories: []string{"1", "2"},
+				},
+			}, nil
+		}
 
-	// 	_, err := handler(events.APIGatewayProxyRequest{})
-	// 	if err != nil && err.Error() != ErrNon200Response.Error() {
-	// 		t.Fatalf("Error failed to trigger with an invalid HTTP response: %v", err)
-	// 	}
-	// })
+		mocks.ReturnPostResponse = func(chatId int, text string) (string, error) {
+			return expectedTelegramResponse, ErrNon200Response
+		}
 
-	// t.Run("Successful Request with the mock server", func(t *testing.T) {
+		telegramRequest := Update{
+			Message: Message{
+				Text: "/joke",
+				Chat: Chat{
+					Id: 1234,
+				},
+			},
+			UpdateId: 1,
+		}
 
-	// 	// Arrange
-	// 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	// 		w.WriteHeader(200)
-	// 		if r.Method == http.MethodGet {
-	// 			w.Write([]byte("{\"id\": \"96221b11-8a37-4495-baf0-134be4feffc1\", \"text\": \"To Ensure Promptness, one is expected to pay beyond the value of service – hence the later abbreviation: T.I.P.\", \"source\": \"djtech.net\", \"source_url\": \"http://www.djtech.net/humor/useless_facts.htm\", \"language\": \"en\", \"permalink\": \"https://uselessfacts.jsph.pl/96221b11-8a37-4495-baf0-134be4feffc1\"}"))
-	// 		}
+		requestBody, err := json.Marshal(telegramRequest)
 
-	// 		if r.Method == http.MethodPost {
-	// 			w.Write([]byte("{\"ok\": true,\"result\": {\"message_id\": 26,\"from\": {\"id\": 1025326803,\"is_bot\": true,\"first_name\": \"MyDailyFact\",\"username\": \"majoFFper_bot\"},\"chat\": {\"id\": -255361673,\"title\": \"Pokémons\",\"type\": \"group\",\"all_members_are_administrators\": true},\"date\": 1614894279,\"text\": \"To Ensure Promptness, one is expected to pay beyond the value of service – hence the later abbreviation: T.I.P.\"}}"))
-	// 		}
+		if err != nil {
+			log.Panic("Can't run test scenario")
+		}
 
-	// 	}))
+		tempRequest := events.APIGatewayProxyRequest{
+			Body:       string(requestBody),
+			Path:       "http://myTelegramWebHookHandler.com/secretToken",
+			HTTPMethod: "POST",
+		}
 
-	// 	restclient.RandomFactsAddress = ts.URL
-	// 	restclient.RandomJokesAddress = ts.URL
-	// 	restclient.TelegramApi = ts.URL
+		myMockClient := &mocks.MockBaseClient{}
 
-	// 	defer ts.Close()
+		restclient.MyJokeClient = myMockClient
 
-	// 	telegramRequest := Update{
-	// 		Message: Message{
-	// 			Text: "/fact",
-	// 			Chat: Chat{
-	// 				Id: 1234,
-	// 			},
-	// 		},
-	// 		UpdateId: 1,
-	// 	}
+		restclient.MyTelegramClient = myMockClient
 
-	// 	requestBody, err := json.Marshal(telegramRequest)
+		// Act
+		response, err := handler(tempRequest)
 
-	// 	tempRequest := events.APIGatewayProxyRequest{
-	// 		Body:       string(requestBody),
-	// 		Path:       "http://myTelegramWebHookHandler.com/secretToken",
-	// 		HTTPMethod: "POST",
-	// 	}
+		// Assert
 
-	// 	// Act
-	// 	response, err := handler(tempRequest)
-	// 	if err != nil {
-	// 		t.Fatal("Everything should be ok")
-	// 	}
+		assert.Equal(t, 1, myMockClient.ReturnGetJokeCallCount)
 
-	// 	// Assert
+		assert.Equal(t, 0, myMockClient.ReturnGetFactCallCount)
 
-	// 	assert.EqualValues(t,
-	// 		`{"ok": true,"result": {"message_id": 26,"from": {"id": 1025326803,"is_bot": true,"first_name": "MyDailyFact","username": "majoFFper_bot"},"chat": {"id": -255361673,"title": "Pokémons","type": "group","all_members_are_administrators": true},"date": 1614894279,"text": "To Ensure Promptness, one is expected to pay beyond the value of service – hence the later abbreviation: T.I.P."}}`,
-	// 		response.Body)
-	// })
+		assert.Equal(t, 1, myMockClient.ReturnPostResponseCallCount)
 
-	// t.Run("Issue getting fact from fact api", func(t *testing.T) {
+		assert.EqualValues(t,
+			expectedTelegramResponse,
+			response.Body)
+	})
 
-	// 	// Arrange
-	// 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	// 		w.WriteHeader(500)
-	// 	}))
-	// 	defer ts.Close()
+	t.Run("Failed Fact Request", func(t *testing.T) {
 
-	// 	restclient.RandomFactsAddress = ts.URL
+		mocks.ReturnGetFact = func() (*restclient.GeneratedFact, error) {
 
-	// 	// Act
-	// 	_, err := handler(events.APIGatewayProxyRequest{})
+			return nil, ErrNon200Response
+		}
 
-	// 	// Assert
-	// 	if err == nil {
-	// 		t.Fatal("Error failed to trigger with an invalid HTTP response")
-	// 	}
-	// })
+		telegramRequest := Update{
+			Message: Message{
+				Text: "/fact",
+				Chat: Chat{
+					Id: 1234,
+				},
+			},
+			UpdateId: 1,
+		}
 
-	t.Run("Successful Joke Request mocking the rest client", func(t *testing.T) {
+		requestBody, err := json.Marshal(telegramRequest)
+
+		if err != nil {
+			t.Fatal("Can't run test scenario")
+		}
+
+		tempRequest := events.APIGatewayProxyRequest{
+			Body:       string(requestBody),
+			Path:       "http://myTelegramWebHookHandler.com/secretToken",
+			HTTPMethod: "POST",
+		}
+
+		myMockClient := &mocks.MockBaseClient{}
+
+		restclient.MyFactClient = myMockClient
+
+		restclient.MyTelegramClient = myMockClient
+
+		// Act
+		response, err := handler(tempRequest)
+
+		// Assert
+
+		assert.Equal(t, 0, myMockClient.ReturnGetJokeCallCount)
+
+		assert.Equal(t, 1, myMockClient.ReturnGetFactCallCount)
+
+		assert.Equal(t, 0, myMockClient.ReturnPostResponseCallCount)
+
+		assert.EqualValues(t,
+			"Error calling fact generation api",
+			response.Body)
+	})
+
+	t.Run("Failed Joke Request", func(t *testing.T) {
+
+		mocks.ReturnGetJoke = func() (*restclient.GeneratedJoke, error) {
+
+			return nil, ErrNon200Response
+		}
+
+		telegramRequest := Update{
+			Message: Message{
+				Text: "/joke",
+				Chat: Chat{
+					Id: 1234,
+				},
+			},
+			UpdateId: 1,
+		}
+
+		requestBody, err := json.Marshal(telegramRequest)
+
+		if err != nil {
+			t.Fatal("Can't run test scenario")
+		}
+
+		tempRequest := events.APIGatewayProxyRequest{
+			Body:       string(requestBody),
+			Path:       "http://myTelegramWebHookHandler.com/secretToken",
+			HTTPMethod: "POST",
+		}
+
+		myMockClient := &mocks.MockBaseClient{}
+
+		restclient.MyJokeClient = myMockClient
+
+		restclient.MyTelegramClient = myMockClient
+
+		// Act
+		response, err := handler(tempRequest)
+
+		// Assert
+
+		assert.Equal(t, 1, myMockClient.ReturnGetJokeCallCount)
+
+		assert.Equal(t, 0, myMockClient.ReturnGetFactCallCount)
+
+		assert.Equal(t, 0, myMockClient.ReturnPostResponseCallCount)
+
+		assert.EqualValues(t,
+			"Error calling joke generation api",
+			response.Body)
+	})
+
+	t.Run("Successful Joke Request", func(t *testing.T) {
 
 		mocks.ReturnGetJoke = func() (*restclient.GeneratedJoke, error) {
 
@@ -139,30 +212,39 @@ func TestHandler(t *testing.T) {
 
 		requestBody, err := json.Marshal(telegramRequest)
 
+		if err != nil {
+			t.Fatal("Can't run test scenario")
+		}
+
 		tempRequest := events.APIGatewayProxyRequest{
 			Body:       string(requestBody),
 			Path:       "http://myTelegramWebHookHandler.com/secretToken",
 			HTTPMethod: "POST",
 		}
 
-		restclient.MyJokeClient = &mocks.MockBaseClient{}
+		myMockClient := &mocks.MockBaseClient{}
 
-		restclient.MyTelegramClient = &mocks.MockBaseClient{}
+		restclient.MyJokeClient = myMockClient
+
+		restclient.MyTelegramClient = myMockClient
 
 		// Act
 		response, err := handler(tempRequest)
 
-		if err != nil {
-			t.Fatal("Everything should be ok")
-		}
-
 		// Assert
+
+		assert.Equal(t, 1, myMockClient.ReturnGetJokeCallCount)
+
+		assert.Equal(t, 0, myMockClient.ReturnGetFactCallCount)
+
+		assert.Equal(t, 1, myMockClient.ReturnPostResponseCallCount)
+
 		assert.EqualValues(t,
 			`{"ok": true,"result": {"message_id": 26,"from": {"id": 1025326803,"is_bot": true,"first_name": "MyDailyFact","username": "majoFFper_bot"},"chat": {"id": -255361673,"title": "Pokémons","type": "group","all_members_are_administrators": true},"date": 1614894279,"text": "To Ensure Promptness, one is expected to pay beyond the value of service – hence the later abbreviation: T.I.P."}}`,
 			response.Body)
 	})
 
-	t.Run("Successful Fact Request mocking the rest client", func(t *testing.T) {
+	t.Run("Successful Fact Request", func(t *testing.T) {
 
 		mocks.ReturnGetFact = func() (*restclient.GeneratedFact, error) {
 
@@ -174,13 +256,6 @@ func TestHandler(t *testing.T) {
 				Language:  "en",
 				Permalink: "teste124",
 			}, nil
-		}
-
-		mocks.ReturnPostResponse = func(chatId int, text string) (string, error) {
-
-			escapedJsonContent := "{\"ok\": true,\"result\": {\"message_id\": 26,\"from\": {\"id\": 1025326803,\"is_bot\": true,\"first_name\": \"MyDailyFact\",\"username\": \"majoFFper_bot\"},\"chat\": {\"id\": -255361673,\"title\": \"Pokémons\",\"type\": \"group\",\"all_members_are_administrators\": true},\"date\": 1614894279,\"text\": \"To Ensure Promptness, one is expected to pay beyond the value of service – hence the later abbreviation: T.I.P.\"}}"
-
-			return escapedJsonContent, nil
 		}
 
 		telegramRequest := Update{
@@ -201,18 +276,26 @@ func TestHandler(t *testing.T) {
 			HTTPMethod: "POST",
 		}
 
-		restclient.MyFactClient = &mocks.MockBaseClient{}
+		myMockClient := &mocks.MockBaseClient{}
 
-		restclient.MyTelegramClient = &mocks.MockBaseClient{}
+		restclient.MyFactClient = myMockClient
+
+		restclient.MyTelegramClient = myMockClient
 
 		// Act
 		response, err := handler(tempRequest)
 
 		if err != nil {
-			t.Fatal("Everything should be ok")
+			t.Fatal("Can't run test scenario")
 		}
 
 		// Assert
+
+		assert.Equal(t, 1, myMockClient.ReturnPostResponseCallCount)
+
+		assert.Equal(t, 1, myMockClient.ReturnGetFactCallCount)
+
+		assert.Equal(t, 0, myMockClient.ReturnGetJokeCallCount)
 
 		assert.EqualValues(t,
 			`{"ok": true,"result": {"message_id": 26,"from": {"id": 1025326803,"is_bot": true,"first_name": "MyDailyFact","username": "majoFFper_bot"},"chat": {"id": -255361673,"title": "Pokémons","type": "group","all_members_are_administrators": true},"date": 1614894279,"text": "To Ensure Promptness, one is expected to pay beyond the value of service – hence the later abbreviation: T.I.P."}}`,
