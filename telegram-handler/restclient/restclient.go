@@ -75,10 +75,6 @@ func (cb *BaseClient) GetFact() (*GeneratedFact, error) {
 		return responseGeneratedFact, err
 	}
 
-	if r.StatusCode != 200 {
-		return responseGeneratedFact, err
-	}
-
 	defer r.Body.Close()
 
 	body, err := ioutil.ReadAll(r.Body)
@@ -107,10 +103,6 @@ func (cb *BaseClient) GetJoke() (*GeneratedJoke, error) {
 	responseGeneratedJoke := &GeneratedJoke{}
 
 	if err != nil {
-		return responseGeneratedJoke, err
-	}
-
-	if r.StatusCode != 200 {
 		return responseGeneratedJoke, err
 	}
 
@@ -146,13 +138,13 @@ func (cb *BaseClient) PostResponse(chatId int, text string) (string, error) {
 		})
 
 	if err != nil {
-		log.Printf("error when posting text to the chat: %s", err.Error())
 		return "", err
 	}
 
 	defer response.Body.Close()
 
 	var bodyBytes, errRead = ioutil.ReadAll(response.Body)
+
 	if errRead != nil {
 		log.Printf("error in parsing telegram answer %s", errRead.Error())
 		return "", err
@@ -170,6 +162,7 @@ func init() {
 func get(url string) (*http.Response, error) {
 
 	request, err := http.NewRequest(http.MethodGet, url, nil)
+
 	if err != nil {
 		return nil, err
 	}

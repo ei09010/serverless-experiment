@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 	"my-first-telegram-bot/telegram-handler/restclient"
 	"my-first-telegram-bot/telegram-handler/utils/mocks"
 	"testing"
@@ -46,7 +45,7 @@ func TestHandler(t *testing.T) {
 		requestBody, err := json.Marshal(telegramRequest)
 
 		if err != nil {
-			log.Panic("Can't run test scenario")
+			t.Fatal("Can't run test scenario")
 		}
 
 		tempRequest := events.APIGatewayProxyRequest{
