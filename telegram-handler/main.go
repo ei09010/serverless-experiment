@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
-	dto "my-first-telegram-bot/telegram-handler/Dto"
+	"my-first-telegram-bot/telegram-handler/dto"
 	"my-first-telegram-bot/telegram-handler/restclient"
 	"strconv"
 	"strings"

@@ -5,7 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	dto "my-first-telegram-bot/telegram-handler/Dto"
+	"my-first-telegram-bot/telegram-handler/dto"
 	"net/http"
 	"net/url"
 	"os"
