@@ -14,9 +14,14 @@ import (
 )
 
 var (
-	chatId = 0
+	chatId                      = 0
+	TELEGRAM_FACT_REQUEST_TOKEN = "/fact"
+	TELEGRAM_JOKE_REQUEST_TOKEN = "/joke"
 
-	ErrNon200Response = errors.New("Non 200 Response found")
+	ErrNon200Response        = errors.New("Non 200 Response found")
+	ErrorHttpRequest         = "Error executing http request"
+	InformalInvalidResponse  = "Thank you for reaching out, stuff is up and running, but this is a telegram bot and this endpoint will eventually vanish"
+	InvalidInputFromTelegram = "No valid input from telegram request detected"
 )
 
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -28,15 +33,13 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	if err != nil {
 		return events.APIGatewayProxyResponse{
 			StatusCode: 200,
-			Body:       "Thank you for reaching out, stuff is up and running, but this is a telegram bot and this endpoint will eventually vanish",
+			Body:       InformalInvalidResponse,
 		}, nil
 	}
 
-	log.Printf("processed the following text from telegram: %s", update.Message.Text)
-
 	var generatedText []byte
 
-	if strings.Contains(update.Message.Text, "/fact") {
+	if strings.Contains(update.Message.Text, TELEGRAM_FACT_REQUEST_TOKEN) {
 
 		generatedFact, err := restclient.MyFactClient.GetFact()
 
@@ -44,7 +47,7 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 
 			return events.APIGatewayProxyResponse{
 				StatusCode: 500,
-				Body:       "Error calling fact generation api",
+				Body:       ErrorHttpRequest,
 			}, err
 
 		}
@@ -55,14 +58,14 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 			return events.APIGatewayProxyResponse{}, err
 		}
 
-	} else if strings.Contains(update.Message.Text, "/joke") {
+	} else if strings.Contains(update.Message.Text, TELEGRAM_JOKE_REQUEST_TOKEN) {
 
 		generatedJoke, err := restclient.MyJokeClient.GetJoke()
 
 		if err != nil {
 			return events.APIGatewayProxyResponse{
 				StatusCode: 500,
-				Body:       "Error calling joke generation api",
+				Body:       ErrorHttpRequest,
 			}, err
 		}
 
@@ -73,11 +76,11 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		}
 
 	} else {
-		log.Printf("No valid input dected")
+		log.Printf(InvalidInputFromTelegram)
 
 		return events.APIGatewayProxyResponse{
 			StatusCode: 200,
-			Body:       "No valid input dected",
+			Body:       InvalidInputFromTelegram,
 		}, nil
 	}
 
@@ -105,12 +108,11 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 
 }
 
-// parseTelegramRequest handles incoming update from the Telegram web hook
 func parseTelegramRequest(requestBody string) (*dto.Update, error) {
 	var update dto.Update
 
 	if err := json.Unmarshal([]byte(requestBody), &update); err != nil {
-		log.Printf("could not decode incoming update %s", err.Error())
+
 		return nil, err
 	}
 

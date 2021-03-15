@@ -120,6 +120,7 @@ func (cb *BaseClient) GetJoke() (*dto.GeneratedJoke, error) {
 }
 
 func (cb *BaseClient) PostResponse(chatId int, text string) (string, error) {
+
 	log.Printf("Sending %s to chat_id: %d", text, chatId)
 
 	response, err := postForm(
@@ -138,11 +139,11 @@ func (cb *BaseClient) PostResponse(chatId int, text string) (string, error) {
 	var bodyBytes, errRead = ioutil.ReadAll(response.Body)
 
 	if errRead != nil {
-		log.Printf("error in parsing telegram answer %s", errRead.Error())
+
 		return "", err
 	}
+
 	bodyString := string(bodyBytes)
-	log.Printf("Body of Telegram Response: %s", bodyString)
 
 	return bodyString, nil
 }
