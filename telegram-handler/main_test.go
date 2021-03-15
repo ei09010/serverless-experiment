@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	dto "my-first-telegram-bot/telegram-handler/Dto"
 	"my-first-telegram-bot/telegram-handler/restclient"
 	"my-first-telegram-bot/telegram-handler/utils/mocks"
 	"testing"
@@ -16,11 +17,11 @@ func TestHandlerFailedPostTelegramRequest(t *testing.T) {
 
 		expectedTelegramResponse := "issue in telegram"
 
-		mocks.ReturnGetJoke = func() (*restclient.GeneratedJoke, error) {
+		mocks.ReturnGetJoke = func() (*dto.GeneratedJoke, error) {
 
-			return &restclient.GeneratedJoke{
+			return &dto.GeneratedJoke{
 				Type: "1",
-				Value: restclient.JokeValue{
+				Value: dto.JokeValue{
 					ID:         1,
 					Joke:       "",
 					Categories: []string{"1", "2"},
@@ -32,10 +33,10 @@ func TestHandlerFailedPostTelegramRequest(t *testing.T) {
 			return expectedTelegramResponse, ErrNon200Response
 		}
 
-		telegramRequest := Update{
-			Message: Message{
+		telegramRequest := dto.Update{
+			Message: dto.Message{
 				Text: "/joke",
-				Chat: Chat{
+				Chat: dto.Chat{
 					Id: 1234,
 				},
 			},
@@ -81,15 +82,15 @@ func TestHandlerFailedJokeRequest(t *testing.T) {
 
 	t.Run("Failed Joke Request", func(t *testing.T) {
 
-		mocks.ReturnGetJoke = func() (*restclient.GeneratedJoke, error) {
+		mocks.ReturnGetJoke = func() (*dto.GeneratedJoke, error) {
 
 			return nil, ErrNon200Response
 		}
 
-		telegramRequest := Update{
-			Message: Message{
+		telegramRequest := dto.Update{
+			Message: dto.Message{
 				Text: "/joke",
-				Chat: Chat{
+				Chat: dto.Chat{
 					Id: 1234,
 				},
 			},
@@ -135,11 +136,11 @@ func TestHandlerSuccessfulJokeRequest(t *testing.T) {
 
 	t.Run("Successful Joke Request", func(t *testing.T) {
 
-		mocks.ReturnGetJoke = func() (*restclient.GeneratedJoke, error) {
+		mocks.ReturnGetJoke = func() (*dto.GeneratedJoke, error) {
 
-			return &restclient.GeneratedJoke{
+			return &dto.GeneratedJoke{
 				Type: "1",
-				Value: restclient.JokeValue{
+				Value: dto.JokeValue{
 					ID:         1,
 					Joke:       "",
 					Categories: []string{"1", "2"},
@@ -154,10 +155,10 @@ func TestHandlerSuccessfulJokeRequest(t *testing.T) {
 			return escapedJsonContent, nil
 		}
 
-		telegramRequest := Update{
-			Message: Message{
+		telegramRequest := dto.Update{
+			Message: dto.Message{
 				Text: "/joke",
-				Chat: Chat{
+				Chat: dto.Chat{
 					Id: 1234,
 				},
 			},
@@ -202,15 +203,15 @@ func TestHandlerSuccessfulJokeRequest(t *testing.T) {
 func TestHandlerFailedFactRequest(t *testing.T) {
 	t.Run("Failed Fact Request", func(t *testing.T) {
 
-		mocks.ReturnGetFact = func() (*restclient.GeneratedFact, error) {
+		mocks.ReturnGetFact = func() (*dto.GeneratedFact, error) {
 
 			return nil, ErrNon200Response
 		}
 
-		telegramRequest := Update{
-			Message: Message{
+		telegramRequest := dto.Update{
+			Message: dto.Message{
 				Text: "/fact",
-				Chat: Chat{
+				Chat: dto.Chat{
 					Id: 1234,
 				},
 			},
@@ -256,9 +257,9 @@ func TestHandlerSuccessfulFactRequest(t *testing.T) {
 
 	t.Run("Successful Fact Request", func(t *testing.T) {
 
-		mocks.ReturnGetFact = func() (*restclient.GeneratedFact, error) {
+		mocks.ReturnGetFact = func() (*dto.GeneratedFact, error) {
 
-			return &restclient.GeneratedFact{
+			return &dto.GeneratedFact{
 				ID:        "1",
 				Text:      "potato potato",
 				Source:    "potato potato",
@@ -275,10 +276,10 @@ func TestHandlerSuccessfulFactRequest(t *testing.T) {
 			return escapedJsonContent, nil
 		}
 
-		telegramRequest := Update{
-			Message: Message{
+		telegramRequest := dto.Update{
+			Message: dto.Message{
 				Text: "/fact",
-				Chat: Chat{
+				Chat: dto.Chat{
 					Id: 1234,
 				},
 			},

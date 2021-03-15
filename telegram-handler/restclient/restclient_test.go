@@ -1,6 +1,10 @@
 package restclient
 
 import (
+	"bytes"
+	"errors"
+	"io/ioutil"
+	"my-first-telegram-bot/telegram-handler/utils/mocks"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -19,13 +23,21 @@ func TestFailedFactRequest(t *testing.T) {
 		expectedPermalink := ""
 
 		// Arrange
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(500)
-		}))
 
-		defer ts.Close()
+		r := ioutil.NopCloser(bytes.NewReader([]byte("")))
 
-		factClient := &BaseClient{url: ts.URL}
+		factErrClient := &mocks.MockHttpClient{
+			DoFunc: func(*http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: 500,
+					Body:       r,
+				}, errors.New("batata")
+			},
+		}
+
+		factClient := &BaseClient{
+			client: factErrClient,
+			url:    "temp"}
 
 		// Act
 		response, err := factClient.GetFact()
@@ -68,15 +80,20 @@ func TestFailedJokeRequest(t *testing.T) {
 		expectedCategories := []string(nil)
 
 		// Arrange
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(500)
+		r := ioutil.NopCloser(bytes.NewReader([]byte("")))
 
-			t.Error("")
-		}))
+		jokeHttpErrClient := &mocks.MockHttpClient{
+			DoFunc: func(*http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: 500,
+					Body:       r,
+				}, errors.New("batata")
+			},
+		}
 
-		defer ts.Close()
-
-		jokeClient := &BaseClient{url: ts.URL}
+		jokeClient := &BaseClient{
+			client: jokeHttpErrClient,
+			url:    "temp"}
 
 		// Act
 		response, err := jokeClient.GetJoke()
@@ -112,13 +129,20 @@ func TestFailedTelegramRequest(t *testing.T) {
 		expectedResponseText := ""
 
 		// Arrange
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(500)
-		}))
+		r := ioutil.NopCloser(bytes.NewReader([]byte(expectedResponseText)))
 
-		defer ts.Close()
+		telegramHttErrClient := &mocks.MockHttpClient{
+			DoFunc: func(*http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: 500,
+					Body:       r,
+				}, errors.New("batata")
+			},
+		}
 
-		telegramClient := &BaseClient{url: ts.URL}
+		telegramClient := &BaseClient{
+			client: telegramHttErrClient,
+			url:    "temp"}
 
 		// Act
 		response, err := telegramClient.PostResponse(123, "stuff happened")
@@ -134,20 +158,28 @@ func TestFailedTelegramRequest(t *testing.T) {
 	})
 
 }
-func TestRestClient(t *testing.T) {
+
+func TestSuccessPostTelegram(t *testing.T) {
 
 	t.Run("Successful post to telegram request", func(t *testing.T) {
 
 		expectedResponseText := "{\"ok\": true,\"result\": {\"message_id\": 45,\"from\": {\"id\": 1025326803,\"is_bot\": true,\"first_name\": \"MyDailyFact\",\"username\": \"majoFFper_bot\"},\"chat\": {\"id\": 690639026,\"first_name\": \"Mário\",\"type\": \"private\"},\"date\": 1615076796,\"text\": \"Product Owners never ask Chuck Norris for more features. They ask for mercy.\"}}"
 
 		// Arrange
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(500)
+		r := ioutil.NopCloser(bytes.NewReader([]byte(expectedResponseText)))
 
-			w.Write([]byte(expectedResponseText))
-		}))
+		telegramHttSuccessClient := &mocks.MockHttpClient{
+			DoFunc: func(*http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: 200,
+					Body:       r,
+				}, nil
+			},
+		}
 
-		telegramClient := &BaseClient{url: ts.URL}
+		telegramClient := &BaseClient{
+			client: telegramHttSuccessClient,
+			url:    "temp"}
 
 		// Act
 		response, err := telegramClient.PostResponse(123, "stuff happened")
@@ -163,6 +195,10 @@ func TestRestClient(t *testing.T) {
 			response)
 
 	})
+
+}
+
+func TestSuccessJokeRequest(t *testing.T) {
 
 	t.Run("Successful joke request", func(t *testing.T) {
 
@@ -207,6 +243,9 @@ func TestRestClient(t *testing.T) {
 			response.Value.Categories)
 
 	})
+
+}
+func TestSuccessFactRequest(t *testing.T) {
 
 	t.Run("Successful fact request", func(t *testing.T) {
 

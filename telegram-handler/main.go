@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	dto "my-first-telegram-bot/telegram-handler/Dto"
 	"my-first-telegram-bot/telegram-handler/restclient"
 	"strconv"
 	"strings"
@@ -17,23 +18,6 @@ var (
 
 	ErrNon200Response = errors.New("Non 200 Response found")
 )
-
-// Update is a Telegram object that the handler receives every time an user interacts with the bot.
-type Update struct {
-	UpdateId int     `json:"update_id"`
-	Message  Message `json:"message"`
-}
-
-// Message is a Telegram object that can be found in an update.
-type Message struct {
-	Text string `json:"text"`
-	Chat Chat   `json:"chat"`
-}
-
-// A Telegram Chat indicates the conversation to which the message belongs.
-type Chat struct {
-	Id int `json:"id"`
-}
 
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 
@@ -122,8 +106,8 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 }
 
 // parseTelegramRequest handles incoming update from the Telegram web hook
-func parseTelegramRequest(requestBody string) (*Update, error) {
-	var update Update
+func parseTelegramRequest(requestBody string) (*dto.Update, error) {
+	var update dto.Update
 
 	if err := json.Unmarshal([]byte(requestBody), &update); err != nil {
 		log.Printf("could not decode incoming update %s", err.Error())

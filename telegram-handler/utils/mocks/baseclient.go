@@ -1,12 +1,13 @@
 package mocks
 
 import (
-	"my-first-telegram-bot/telegram-handler/restclient"
+	dto "my-first-telegram-bot/telegram-handler/Dto"
+	"net/http"
 )
 
 var (
-	ReturnGetFact      func() (*restclient.GeneratedFact, error)
-	ReturnGetJoke      func() (*restclient.GeneratedJoke, error)
+	ReturnGetFact      func() (*dto.GeneratedFact, error)
+	ReturnGetJoke      func() (*dto.GeneratedJoke, error)
 	ReturnPostResponse func(chatId int, text string) (string, error)
 )
 
@@ -16,16 +17,25 @@ type MockBaseClient struct {
 	ReturnPostResponseCallCount int
 }
 
-func (mck *MockBaseClient) GetFact() (*restclient.GeneratedFact, error) {
+func (mck *MockBaseClient) GetFact() (*dto.GeneratedFact, error) {
 	mck.ReturnGetFactCallCount++
 	return ReturnGetFact()
 }
 
-func (mck *MockBaseClient) GetJoke() (*restclient.GeneratedJoke, error) {
+func (mck *MockBaseClient) GetJoke() (*dto.GeneratedJoke, error) {
 	mck.ReturnGetJokeCallCount++
 	return ReturnGetJoke()
 }
 func (mck *MockBaseClient) PostResponse(chatId int, text string) (string, error) {
 	mck.ReturnPostResponseCallCount++
 	return ReturnPostResponse(chatId, text)
+}
+
+type MockHttpClient struct {
+	DoFunc func(req *http.Request) (*http.Response, error)
+}
+
+func (mckHt *MockHttpClient) Do(req *http.Request) (*http.Response, error) {
+
+	return mckHt.DoFunc(req)
 }

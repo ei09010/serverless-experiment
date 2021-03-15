@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	dto "my-first-telegram-bot/telegram-handler/Dto"
 	"net/http"
 	"net/url"
 	"os"
@@ -13,7 +14,7 @@ import (
 )
 
 var (
-	Client *http.Client
+	Client HttpClient
 
 	RandomFactsAddress = "https://uselessfacts.jsph.pl/today.json?language=en"
 
@@ -21,58 +22,44 @@ var (
 
 	TelegramApi = "https://api.telegram.org/bot" + os.Getenv("TELEGRAM_API_TOKEN") + "/sendMessage"
 
-	MyFactClient FactClient = &BaseClient{url: RandomFactsAddress}
+	MyFactClient FactClient = &BaseClient{
+
+		url: RandomFactsAddress}
 
 	MyJokeClient JokeClient = &BaseClient{url: RandomJokesAddress}
 
 	MyTelegramClient TelegramClient = &BaseClient{url: TelegramApi}
 )
 
-type GeneratedFact struct {
-	ID        string `json:"id"`
-	Text      string `json:"text"`
-	Source    string `json:"source"`
-	SourceURL string `json:"source_url"`
-	Language  string `json:"language"`
-	Permalink string `json:"permalink"`
-}
-
-type JokeValue struct {
-	ID         int      `json:"id"`
-	Joke       string   `json:"joke"`
-	Categories []string `json:"categories"`
-}
-
-type GeneratedJoke struct {
-	Type  string `json:"type"`
-	Value JokeValue
-}
-
 type FactClient interface {
-	GetFact() (*GeneratedFact, error)
+	GetFact() (*dto.GeneratedFact, error)
 }
 
 type JokeClient interface {
-	GetJoke() (*GeneratedJoke, error)
+	GetJoke() (*dto.GeneratedJoke, error)
 }
 
 type TelegramClient interface {
 	PostResponse(chatId int, content string) (string, error)
 }
 
+type HttpClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
 type BaseClient struct {
-	client http.Client
+	client HttpClient
 	url    string
 }
 
-func (cb *BaseClient) GetFact() (*GeneratedFact, error) {
+func (cb *BaseClient) GetFact() (*dto.GeneratedFact, error) {
 
 	r, err := get(cb.url)
 
-	responseGeneratedFact := &GeneratedFact{}
+	factToReturn := &dto.GeneratedFact{}
 
 	if err != nil {
-		return responseGeneratedFact, err
+		return factToReturn, err
 	}
 
 	defer r.Body.Close()
@@ -80,30 +67,30 @@ func (cb *BaseClient) GetFact() (*GeneratedFact, error) {
 	body, err := ioutil.ReadAll(r.Body)
 
 	if err != nil {
-		return responseGeneratedFact, err
+		return factToReturn, err
 	}
 
-	err = json.Unmarshal([]byte(body), &responseGeneratedFact)
+	err = json.Unmarshal([]byte(body), &factToReturn)
 
 	if err != nil {
-		return responseGeneratedFact, err
+		return factToReturn, err
 	}
 
-	if len(responseGeneratedFact.Text) == 0 {
-		return responseGeneratedFact, err
+	if len(factToReturn.Text) == 0 {
+		return factToReturn, err
 	}
 
-	return responseGeneratedFact, nil
+	return factToReturn, nil
 }
 
-func (cb *BaseClient) GetJoke() (*GeneratedJoke, error) {
+func (cb *BaseClient) GetJoke() (*dto.GeneratedJoke, error) {
 
 	r, err := get(cb.url)
 
-	responseGeneratedJoke := &GeneratedJoke{}
+	jokeToReturn := &dto.GeneratedJoke{}
 
 	if err != nil {
-		return responseGeneratedJoke, err
+		return jokeToReturn, err
 	}
 
 	defer r.Body.Close()
@@ -111,20 +98,20 @@ func (cb *BaseClient) GetJoke() (*GeneratedJoke, error) {
 	body, err := ioutil.ReadAll(r.Body)
 
 	if err != nil {
-		return responseGeneratedJoke, err
+		return jokeToReturn, err
 	}
 
-	err = json.Unmarshal([]byte(body), &responseGeneratedJoke)
+	err = json.Unmarshal([]byte(body), &jokeToReturn)
 
 	if err != nil {
-		return responseGeneratedJoke, err
+		return jokeToReturn, err
 	}
 
-	if len(responseGeneratedJoke.Value.Joke) == 0 {
-		return responseGeneratedJoke, err
+	if len(jokeToReturn.Value.Joke) == 0 {
+		return jokeToReturn, err
 	}
 
-	return responseGeneratedJoke, nil
+	return jokeToReturn, nil
 }
 
 func (cb *BaseClient) PostResponse(chatId int, text string) (string, error) {
@@ -183,5 +170,7 @@ func post(url, contentType string, body io.Reader) (*http.Response, error) {
 
 func postForm(url string, data url.Values) (resp *http.Response, err error) {
 
-	return post(url, "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
+	tempResturnPost, err := post(url, "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
+
+	return tempResturnPost, err
 }
