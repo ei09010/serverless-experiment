@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"my-first-telegram-bot/telegram-handler/utils/mocks"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -202,20 +201,28 @@ func TestSuccessJokeRequest(t *testing.T) {
 
 	t.Run("Successful joke request", func(t *testing.T) {
 
+		rawResponse := "{\"type\": \"success\",\"value\": {\"id\": 479,\"joke\": \"Chuck Norris does not need to know about class factory pattern. He can instantiate interfaces.\",\"categories\": [\"nerdy\"]}}"
+
 		expectedId := 479
 		expectedjoke := "Chuck Norris does not need to know about class factory pattern. He can instantiate interfaces."
 		expectedType := "success"
 		expectedCategories := []string([]string{"nerdy"})
 
 		// Arrange
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(200)
-			if r.Method == http.MethodGet {
-				w.Write([]byte("{\"type\": \"success\",\"value\": {\"id\": 479,\"joke\": \"Chuck Norris does not need to know about class factory pattern. He can instantiate interfaces.\",\"categories\": [\"nerdy\"]}}"))
-			}
-		}))
+		r := ioutil.NopCloser(bytes.NewReader([]byte(rawResponse)))
 
-		jokeClient := &BaseClient{url: ts.URL}
+		jokeHttSuccessClient := &mocks.MockHttpClient{
+			DoFunc: func(*http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: 200,
+					Body:       r,
+				}, nil
+			},
+		}
+
+		jokeClient := &BaseClient{
+			client: jokeHttSuccessClient,
+			url:    "temp"}
 
 		// Act
 		response, err := jokeClient.GetJoke()
@@ -249,6 +256,8 @@ func TestSuccessFactRequest(t *testing.T) {
 
 	t.Run("Successful fact request", func(t *testing.T) {
 
+		rawFactResponse := "{\"id\": \"96221b11-8a37-4495-baf0-134be4feffc1\", \"text\": \"To Ensure Promptness, one is expected to pay beyond the value of service – hence the later abbreviation: T.I.P.\", \"source\": \"djtech.net\", \"source_url\": \"http://www.djtech.net/humor/useless_facts.htm\", \"language\": \"en\", \"permalink\": \"https://uselessfacts.jsph.pl/96221b11-8a37-4495-baf0-134be4feffc1\"}"
+
 		expectedId := "96221b11-8a37-4495-baf0-134be4feffc1"
 		expectedText := "To Ensure Promptness, one is expected to pay beyond the value of service – hence the later abbreviation: T.I.P."
 		expectedSourceUrl := "http://www.djtech.net/humor/useless_facts.htm"
@@ -256,14 +265,21 @@ func TestSuccessFactRequest(t *testing.T) {
 		expectedPermalink := "https://uselessfacts.jsph.pl/96221b11-8a37-4495-baf0-134be4feffc1"
 
 		// Arrange
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(200)
-			if r.Method == http.MethodGet {
-				w.Write([]byte("{\"id\": \"96221b11-8a37-4495-baf0-134be4feffc1\", \"text\": \"To Ensure Promptness, one is expected to pay beyond the value of service – hence the later abbreviation: T.I.P.\", \"source\": \"djtech.net\", \"source_url\": \"http://www.djtech.net/humor/useless_facts.htm\", \"language\": \"en\", \"permalink\": \"https://uselessfacts.jsph.pl/96221b11-8a37-4495-baf0-134be4feffc1\"}"))
-			}
-		}))
 
-		factClient := &BaseClient{url: ts.URL}
+		r := ioutil.NopCloser(bytes.NewReader([]byte(rawFactResponse)))
+
+		factSuccessClient := &mocks.MockHttpClient{
+			DoFunc: func(*http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: 200,
+					Body:       r,
+				}, nil
+			},
+		}
+
+		factClient := &BaseClient{
+			url:    "",
+			client: factSuccessClient}
 
 		// Act
 		response, err := factClient.GetFact()

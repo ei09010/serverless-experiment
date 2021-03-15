@@ -14,8 +14,6 @@ import (
 )
 
 var (
-	Client HttpClient
-
 	RandomFactsAddress = "https://uselessfacts.jsph.pl/today.json?language=en"
 
 	RandomJokesAddress = "http://api.icndb.com/jokes/random?limitTo=[nerdy]"
@@ -23,12 +21,19 @@ var (
 	TelegramApi = "https://api.telegram.org/bot" + os.Getenv("TELEGRAM_API_TOKEN") + "/sendMessage"
 
 	MyFactClient FactClient = &BaseClient{
+		client: &http.Client{},
+		url:    RandomFactsAddress,
+	}
 
-		url: RandomFactsAddress}
+	MyJokeClient JokeClient = &BaseClient{
+		client: &http.Client{},
+		url:    RandomJokesAddress,
+	}
 
-	MyJokeClient JokeClient = &BaseClient{url: RandomJokesAddress}
-
-	MyTelegramClient TelegramClient = &BaseClient{url: TelegramApi}
+	MyTelegramClient TelegramClient = &BaseClient{
+		client: &http.Client{},
+		url:    TelegramApi,
+	}
 )
 
 type FactClient interface {
@@ -54,7 +59,7 @@ type BaseClient struct {
 
 func (cb *BaseClient) GetFact() (*dto.GeneratedFact, error) {
 
-	r, err := get(cb.url)
+	r, err := get(cb)
 
 	factToReturn := &dto.GeneratedFact{}
 
@@ -85,7 +90,7 @@ func (cb *BaseClient) GetFact() (*dto.GeneratedFact, error) {
 
 func (cb *BaseClient) GetJoke() (*dto.GeneratedJoke, error) {
 
-	r, err := get(cb.url)
+	r, err := get(cb)
 
 	jokeToReturn := &dto.GeneratedJoke{}
 
@@ -118,7 +123,7 @@ func (cb *BaseClient) PostResponse(chatId int, text string) (string, error) {
 	log.Printf("Sending %s to chat_id: %d", text, chatId)
 
 	response, err := postForm(
-		cb.url,
+		cb,
 		url.Values{
 			"chat_id": {strconv.Itoa(chatId)},
 			"text":    {text},
@@ -142,35 +147,32 @@ func (cb *BaseClient) PostResponse(chatId int, text string) (string, error) {
 	return bodyString, nil
 }
 
-func init() {
-	Client = &http.Client{}
-}
+func get(bc *BaseClient) (*http.Response, error) {
 
-func get(url string) (*http.Response, error) {
-
-	request, err := http.NewRequest(http.MethodGet, url, nil)
+	request, err := http.NewRequest(http.MethodGet, bc.url, nil)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return Client.Do(request)
+	return bc.client.Do(request)
 }
 
-func post(url, contentType string, body io.Reader) (*http.Response, error) {
+func post(cb *BaseClient, contentType string, body io.Reader) (*http.Response, error) {
 
-	req, err := http.NewRequest(http.MethodPost, url, body)
+	req, err := http.NewRequest(http.MethodPost, cb.url, body)
+
 	if err != nil {
 		return nil, err
 	}
+
 	req.Header.Set("Content-Type", contentType)
 
-	return Client.Do(req)
+	return cb.client.Do(req)
 }
 
-func postForm(url string, data url.Values) (resp *http.Response, err error) {
+func postForm(cb *BaseClient, data url.Values) (resp *http.Response, err error) {
 
-	tempResturnPost, err := post(url, "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
+	return post(cb, "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
 
-	return tempResturnPost, err
 }
