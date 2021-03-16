@@ -127,7 +127,7 @@ func TestHandlerFailedJokeRequest(t *testing.T) {
 		assert.Equal(t, 0, myMockClient.ReturnPostResponseCallCount)
 
 		assert.EqualValues(t,
-			"Error calling joke generation api",
+			ErrorHttpRequest,
 			response.Body)
 	})
 }
@@ -248,7 +248,7 @@ func TestHandlerFailedFactRequest(t *testing.T) {
 		assert.Equal(t, 0, myMockClient.ReturnPostResponseCallCount)
 
 		assert.EqualValues(t,
-			"Error calling fact generation api",
+			ErrorHttpRequest,
 			response.Body)
 	})
 }
