@@ -5,7 +5,7 @@ This is a sample template for handle-telegram-bot-request - Below is a brief exp
 ```bash
 .
 ├── README.md                   <-- This instructions file
-├── hello-world                 <-- Source code for a lambda function
+├── telegram-handler            <-- Source code for a lambda function
 │   ├── go.mod                  <-- Go dependency definitions
 │   ├── main.go                 <-- Lambda function code
 │   └── main_test.go            <-- Unit tests
